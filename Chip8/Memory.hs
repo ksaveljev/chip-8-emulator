@@ -1,7 +1,8 @@
 module Chip8.Memory where
 
 import Data.Word (Word8, Word16)
-import Data.Array.ST (STUArray)
+import Data.Array.ST (STUArray, newArray)
+import Control.Monad.ST (ST)
 
 data Address = Register Register
              | Pc
@@ -23,8 +24,29 @@ data Memory s = Memory { memory :: STUArray s Word16 Word8
                        , soundTimer :: Word8
                        , pc :: Word16
                        , sp :: Word8
-                       , stack :: [Word16]
+                       , stack :: STUArray s Word8 Word16
                        }
+
+new :: ST s (Memory s)
+new = do
+    memory' <- newArray (0x000, 0xFFF) 0
+    registers' <- newArray (0x0, 0xF) 0
+    stack' <- newArray (0x0, 0xF) 0
+    return Memory { memory = memory'
+                  , registers = registers'
+                  , registerI = 0
+                  , delayTimer = 0
+                  , soundTimer = 0
+                  , pc = 0x200
+                  , sp = 0
+                  , stack = stack'
+                  }
+
+store :: Memory s -> Address -> MemoryValue -> ST s ()
+store = undefined
+
+load :: Memory s -> Address -> ST s MemoryValue
+load = undefined
 
 font :: [Word8]
 font = [ 0xF0, 0x90, 0x90, 0x90, 0xF0 -- 0
