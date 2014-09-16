@@ -1,11 +1,9 @@
 module Chip8.Memory where
 
-import Data.Word (Word8)
+import Data.Word (Word8, Word16)
 import Data.Array.ST (STUArray)
 
-import Chip8.Types
-
-newtype Memory s = Memory { getArray :: STUArray s Address Word8 }
+newtype Memory s = Memory { getArray :: STUArray s Word16 Word8 }
 
 font :: [Word8]
 font = [ 0xF0, 0x90, 0x90, 0x90, 0xF0 -- 0
