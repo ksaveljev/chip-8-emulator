@@ -3,17 +3,28 @@ module Chip8.Memory where
 import Data.Word (Word8, Word16)
 import Data.Array.ST (STUArray)
 
-import Chip8.Registers (Register)
-
 data Address = Register Register
              | Pc
              | Sp
              | Ram Word16
 
+data Register = V1 | V2 | V3 | V4 | V5
+              | V6 | V7 | V8 | V9 | VA
+              | VB | VC | VD | VE | VF
+              | DT | ST | I
+
 data MemoryValue = MemoryValue8 Word8
                  | MemoryValue16 Word16
 
-newtype Memory s = Memory { getArray :: STUArray s Word16 Word8 }
+data Memory s = Memory { memory :: STUArray s Word16 Word8
+                       , registers :: STUArray s Word8 Word8
+                       , registerI :: Word16
+                       , delayTimer :: Word8
+                       , soundTimer :: Word8
+                       , pc :: Word16
+                       , sp :: Word8
+                       , stack :: [Word16]
+                       }
 
 font :: [Word8]
 font = [ 0xF0, 0x90, 0x90, 0x90, 0xF0 -- 0
