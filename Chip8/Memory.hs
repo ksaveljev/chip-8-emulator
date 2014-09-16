@@ -3,6 +3,16 @@ module Chip8.Memory where
 import Data.Word (Word8, Word16)
 import Data.Array.ST (STUArray)
 
+import Chip8.Registers (Register)
+
+data Address = Register Register
+             | Pc
+             | Sp
+             | Ram Word16
+
+data MemoryValue = MemoryValue8 Word8
+                 | MemoryValue16 Word16
+
 newtype Memory s = Memory { getArray :: STUArray s Word16 Word8 }
 
 font :: [Word8]
