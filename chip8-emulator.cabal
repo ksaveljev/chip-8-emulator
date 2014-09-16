@@ -24,3 +24,4 @@ executable chip8-emulator
                        array
   -- hs-source-dirs:      
   default-language:    Haskell2010
+  ghc-options:         -O2 -Wall
