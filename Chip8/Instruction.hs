@@ -1,8 +1,9 @@
 module Chip8.Instruction where
 
 import Data.Word (Word8, Word16)
+import Data.Bits ((.&.), shiftR)
 
-import Chip8.Memory (Register(..), Address(..))
+import Chip8.Memory (Register(..), Address(..), toRegister)
 
 data Instruction = SYS    Address                 -- Jump to a machine code routine at Address
                  | CLS                            -- Clear the display
@@ -41,4 +42,61 @@ data Instruction = SYS    Address                 -- Jump to a machine code rout
                  | LDRI   Register                -- Read registers V0 through Register from memory starting at location I
 
 decodeInstruction :: Word16 -> Instruction
-decodeInstruction = undefined
+decodeInstruction instruction =
+    case operation of
+      0x0 -> case instruction of
+               0x00E0 -> CLS
+               0x00EE -> RET
+               _ -> SYS (Ram addr)
+      0x1 -> JP (Ram addr)
+      0x2 -> CALL (Ram addr)
+      0x3 -> SEB vx byte
+      0x4 -> SNEB vx byte
+      0x5 -> case op of
+               0x0 -> SER vx vy
+               _ -> oops
+      0x6 -> LDB vx byte
+      0x7 -> ADDB vx byte
+      0x8 -> case op of
+               0x0 -> LDR vx vy
+               0x1 -> OR vx vy
+               0x2 -> AND vx vy
+               0x3 -> XOR vx vy
+               0x4 -> ADDR vx vy
+               0x5 -> SUB vx vy
+               0x6 -> SHR vx
+               0x7 -> SUBN vx vy
+               0xE -> SHL vx
+               _ -> oops
+      0x9 -> case op of
+               0x0 -> SNER vx vy
+               _ -> oops
+      0xA -> LDI (Ram addr)
+      0xB -> LONGJP (Ram addr)
+      0xC -> RND vx byte
+      0xD -> DRW vx vy (fromIntegral op)
+      0xE -> case xoxx of
+               0xE090 -> SKP vx
+               0xE0A1 -> SKNP vx
+               _ -> oops
+      0xF -> case xoxx of
+               0xF007 -> LDRDT vx
+               0xF00A -> LDK vx
+               0xF015 -> LDDTR vx
+               0xF018 -> LDST vx
+               0xF01E -> ADDI vx
+               0xF029 -> LDF vx
+               0xF033 -> LDBCD vx
+               0xF055 -> LDIR vx
+               0xF065 -> LDRI vx
+               _ -> oops
+      _ -> oops
+    where
+      operation = (instruction .&. 0xF000) `shiftR` 12
+      addr = instruction .&. 0x0FFF
+      byte = fromIntegral (instruction .&. 0x00FF)
+      op = instruction .&. 0x000F
+      vx = toRegister $ (instruction .&. 0x0F00) `shiftR` 8
+      vy = toRegister $ (instruction .&. 0x00F0) `shiftR` 4
+      xoxx = instruction .&. 0xF0FF
+      oops = error "Unknown instruction"

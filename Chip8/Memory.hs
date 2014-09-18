@@ -16,6 +16,9 @@ data Register = V1 | V2 | V3 | V4 | V5
               | DT | ST | I
               deriving (Enum)
 
+toRegister :: Integral a => a -> Register
+toRegister = toEnum . fromIntegral
+
 data MemoryValue = MemoryValue8 Word8
                  | MemoryValue16 Word16
 
