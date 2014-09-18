@@ -32,7 +32,7 @@ loadInstruction = decodeInstruction <$> loadNextWord
 
 execute :: MonadEmulator m => Instruction -> m ()
 execute (SYS _) = return () -- This instruction is only used on the old computers on which Chip-8 was originally implemented. It is ignored by modern interpreters. 
-execute CLS = undefined
+execute CLS = clearScreen
 execute RET = undefined
 execute (JP (Ram addr)) = store Pc (MemoryValue16 addr)
 execute (CALL (Ram addr)) = undefined
