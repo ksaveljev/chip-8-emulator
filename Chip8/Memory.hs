@@ -8,6 +8,7 @@ import Control.Monad.ST (ST)
 data Address = Register Register
              | Pc
              | Sp
+             | Stack
              | Ram Word16
 
 data Register = V0 | V1 | V2 | V3
@@ -60,7 +61,11 @@ store mem (Register I)  (MemoryValue16 v) = writeSTRef (registerI mem) v
 store mem (Register DT) (MemoryValue8 v)  = writeSTRef (delayTimer mem) v
 store mem (Register ST) (MemoryValue8 v)  = writeSTRef (soundTimer mem) v
 store mem (Register r)  (MemoryValue8 v)  = writeArray (registers mem) (fromIntegral $ fromEnum r) v
-store mem (Ram r)       (MemoryValue8 v)  = writeArray (memory mem) r v
+store mem (Ram addr)    (MemoryValue8 v)  = writeArray (memory mem) addr v
+store mem Stack         (MemoryValue16 v) = do
+    (MemoryValue8 sp') <- load mem Sp
+    store mem Sp (MemoryValue8 $ sp' + 1)
+    writeArray (stack mem) sp' v
 store _ _ _ = error "Incorrect Memory 'store' command"
 
 load :: Memory s -> Address -> ST s MemoryValue
@@ -70,7 +75,13 @@ load mem (Register I)  = readSTRef (registerI mem) >>= \v -> return $ MemoryValu
 load mem (Register DT) = readSTRef (delayTimer mem) >>= \v -> return $ MemoryValue8 v
 load mem (Register ST) = readSTRef (soundTimer mem) >>= \v -> return $ MemoryValue8 v
 load mem (Register r)  = readArray (registers mem) (fromIntegral $ fromEnum r) >>= \v -> return $ MemoryValue8 v
-load mem (Ram r)       = readArray (memory mem) r >>= \v -> return $ MemoryValue8 v
+load mem (Ram addr)    = readArray (memory mem) addr >>= \v -> return $ MemoryValue8 v
+load mem Stack         = do
+    (MemoryValue8 sp') <- load mem Sp
+    store mem Sp (MemoryValue8 $ sp' - 1)
+    readArray (stack mem) (sp' - 1) >>= \v -> return $ MemoryValue16 v
+
+
 
 font :: [Word8]
 font = [ 0xF0, 0x90, 0x90, 0x90, 0xF0 -- 0
