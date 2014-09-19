@@ -3,6 +3,7 @@ module Chip8.Memory where
 import Data.Word (Word8, Word16)
 import Data.STRef
 import Data.Array.ST (STUArray, newArray, readArray, writeArray)
+import System.Random (StdGen)
 import Control.Monad.ST (ST)
 
 data Address = Register Register
@@ -32,10 +33,11 @@ data Memory s = Memory { memory :: STUArray s Word16 Word8
                        , pc :: STRef s Word16
                        , sp :: STRef s Word8
                        , stack :: STUArray s Word8 Word16
+                       , stdGen :: STRef s StdGen
                        }
 
-new :: ST s (Memory s)
-new = do
+new :: StdGen -> ST s (Memory s)
+new rndGen = do
     memory' <- newArray (0x000, 0xFFF) 0
     registers' <- newArray (0x0, 0xF) 0
     registerI' <- newSTRef 0
@@ -44,6 +46,7 @@ new = do
     pc' <- newSTRef 0x200
     sp' <- newSTRef 0
     stack' <- newArray (0x0, 0xF) 0
+    stdGen' <- newSTRef rndGen
     return Memory { memory = memory'
                   , registers = registers'
                   , registerI = registerI'
@@ -52,6 +55,7 @@ new = do
                   , pc = pc'
                   , sp = sp'
                   , stack = stack'
+                  , stdGen = stdGen'
                   }
 
 store :: Memory s -> Address -> MemoryValue -> ST s ()
