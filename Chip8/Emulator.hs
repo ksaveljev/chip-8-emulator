@@ -1,7 +1,8 @@
 module Chip8.Emulator where
 
 import Data.Word (Word16)
-import Data.Bits (shiftL, shiftR, (.&.))
+import Data.Bits (shiftL, shiftR, (.&.), (.|.), xor)
+import Control.Monad (when)
 import Control.Applicative ((<$>))
 import qualified Data.ByteString as B
 
@@ -24,11 +25,16 @@ loadNextWord = do
     (MemoryValue16 pc) <- load Pc
     (MemoryValue8 msbyte) <- load (Ram pc)
     (MemoryValue8 lsbyte) <- load (Ram $ pc + 1)
-    store Pc $ MemoryValue16 (pc + 2)
+    incrementProgramCounter
     return $ fromIntegral (msbyte `shiftL` 8) + fromIntegral lsbyte
 
 loadInstruction :: MonadEmulator m => m Instruction
 loadInstruction = decodeInstruction <$> loadNextWord
+
+incrementProgramCounter :: MonadEmulator m => m ()
+incrementProgramCounter = do
+    (MemoryValue16 v) <- load Pc
+    store Pc (MemoryValue16 $ v + 0x2)
 
 execute :: MonadEmulator m => Instruction -> m ()
 execute (SYS _) = return () -- This instruction is only used on the old computers on which Chip-8 was originally implemented. It is ignored by modern interpreters. 
@@ -41,9 +47,16 @@ execute (CALL (Ram addr)) = do
     pc' <- load Pc
     store Stack pc'
     store Pc (MemoryValue16 addr)
-execute (SEB vx byte) = undefined
-execute (SNEB vx byte) = undefined
-execute (SER vx vy) = undefined
+execute (SEB vx byte) = do
+    (MemoryValue8 v) <- load $ Register vx
+    when (v == byte) incrementProgramCounter
+execute (SNEB vx byte) = do
+    (MemoryValue8 v) <- load $ Register vx
+    when (v /= byte) incrementProgramCounter
+execute (SER vx vy) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    when (a == b) incrementProgramCounter
 execute (LDB vx byte) = store (Register vx) (MemoryValue8 byte)
 execute (ADDB vx byte) = do
     (MemoryValue8 v) <- load $ Register vx
@@ -51,9 +64,18 @@ execute (ADDB vx byte) = do
 execute (LDR vx vy) = do
     v <- load $ Register vy
     store (Register vx) v
-execute (OR vx vy) = undefined
-execute (AND vx vy) = undefined
-execute (XOR vx vy) = undefined
+execute (OR vx vy) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    store (Register vx) (MemoryValue8 $ a .|. b)
+execute (AND vx vy) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    store (Register vx) (MemoryValue8 $ a .&. b)
+execute (XOR vx vy) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    store (Register vx) (MemoryValue8 $ a `xor` b)
 execute (ADDR vx vy) = do
     (MemoryValue8 a) <- load $ Register vx
     (MemoryValue8 b) <- load $ Register vy
@@ -80,7 +102,10 @@ execute (SHL vx) = do
     (MemoryValue8 v) <- load $ Register vx
     store (Register VF) (MemoryValue8 $ (v `shiftR` 7) .&. 0x1)
     store (Register vx) (MemoryValue8 $ v `shiftL` 1)
-execute (SNER vx vy) = undefined
+execute (SNER vx vy) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    when (a /= b) incrementProgramCounter
 execute (LDI (Ram addr)) = store (Register I) (MemoryValue16 addr)
 execute (LONGJP (Ram addr)) = do
     (MemoryValue8 v) <- load $ Register V0
