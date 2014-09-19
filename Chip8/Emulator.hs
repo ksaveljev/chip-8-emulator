@@ -32,7 +32,7 @@ loadNextWord = do
     (MemoryValue8 msbyte) <- load (Ram pc)
     (MemoryValue8 lsbyte) <- load (Ram $ pc + 1)
     incrementProgramCounter
-    return $ fromIntegral (msbyte `shiftL` 8) + fromIntegral lsbyte
+    return $ (fromIntegral msbyte `shiftL` 8) + fromIntegral lsbyte
 
 loadInstruction :: MonadEmulator m => m Instruction
 loadInstruction = decodeInstruction <$> loadNextWord

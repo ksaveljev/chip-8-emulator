@@ -40,6 +40,7 @@ data Instruction = SYS    Address                 -- Jump to a machine code rout
                  | LDBCD  Register                -- Store BCD representation of Register in memory locations I, I+1, I+2
                  | LDIR   Register                -- Store registers V0 through Register in memory starting at location I
                  | LDRI   Register                -- Read registers V0 through Register from memory starting at location I
+                 deriving (Show)
 
 decodeInstruction :: Word16 -> Instruction
 decodeInstruction instruction =

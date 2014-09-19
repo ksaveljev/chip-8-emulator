@@ -14,19 +14,21 @@ data Address = Register Register
              | Sp
              | Stack
              | Ram Word16
+             deriving (Show)
 
 data Register = V0 | V1 | V2 | V3
               | V4 | V5 | V6 | V7
               | V8 | V9 | VA | VB
               | VC | VD | VE | VF
               | DT | ST | I
-              deriving (Enum)
+              deriving (Enum, Show)
 
 toRegister :: Integral a => a -> Register
 toRegister = toEnum . fromIntegral
 
 data MemoryValue = MemoryValue8 Word8
                  | MemoryValue16 Word16
+                 deriving (Show)
 
 data Memory s = Memory { memory :: STUArray s Word16 Word8
                        , registers :: STUArray s Word8 Word8
