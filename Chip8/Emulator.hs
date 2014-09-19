@@ -2,13 +2,19 @@ module Chip8.Emulator where
 
 import Data.Word (Word16)
 import Data.Bits (shiftL, shiftR, (.&.), (.|.), xor)
-import Control.Monad (when)
+import Control.Monad (when, unless)
 import Control.Applicative ((<$>))
 import qualified Data.ByteString as B
 
 import Chip8.Monad
 import Chip8.Memory (Address(..), MemoryValue(..), Register(..))
 import Chip8.Instruction
+
+emulate :: MonadEmulator m => m ()
+emulate = do
+    instr <- loadInstruction
+    execute instr
+    emulate
 
 loadProgram :: MonadEmulator m => B.ByteString -> m ()
 loadProgram program =
@@ -110,14 +116,29 @@ execute (LDI (Ram addr)) = store (Register I) (MemoryValue16 addr)
 execute (LONGJP (Ram addr)) = do
     (MemoryValue8 v) <- load $ Register V0
     store Pc (MemoryValue16 $ fromIntegral v + addr)
-execute (RND vx byte) = undefined
-execute (DRW vx vy nibble) = undefined
-execute (SKP vx) = undefined
-execute (SKNP vx) = undefined
+execute (RND vx byte) = do
+    rnd <- randomWord8
+    store (Register vx) (MemoryValue8 $ rnd .&. byte)
+execute (DRW vx vy nibble) = do
+    (MemoryValue8 a) <- load $ Register vx
+    (MemoryValue8 b) <- load $ Register vy
+    (MemoryValue16 i) <- load $ Register I
+    collision <- drawSprite a b (fromIntegral nibble) (Ram i)
+    store (Register VF) (MemoryValue8 $ if collision then 1 else 0)
+execute (SKP vx) = do
+    (MemoryValue8 v) <- load $ Register vx
+    pressed <- isKeyPressed $ toEnum $ fromIntegral v
+    when pressed incrementProgramCounter
+execute (SKNP vx) = do
+    (MemoryValue8 v) <- load $ Register vx
+    pressed <- isKeyPressed $ toEnum $ fromIntegral v
+    unless pressed incrementProgramCounter
 execute (LDRDT vx) = do
     v <- load $ Register DT
     store (Register vx) v
-execute (LDK vx) = undefined
+execute (LDK vx) = do
+    key <- waitForKeyPress
+    store (Register vx) (MemoryValue8 $ fromIntegral $ fromEnum key)
 execute (LDDTR vx) = do
     v <- load $ Register vx
     store (Register DT) v
@@ -131,7 +152,25 @@ execute (ADDI vx) = do
 execute (LDF vx) = do
     (MemoryValue8 v) <- load $ Register vx
     store (Register I) (MemoryValue16 $ fromIntegral $ v .&. 0xF)
-execute (LDBCD vx) = undefined
-execute (LDIR vx) = undefined
-execute (LDRI vx) = undefined
+execute (LDBCD vx) = do
+    (MemoryValue8 v) <- load $ Register vx
+    (MemoryValue16 i) <- load $ Register I
+    let ones = v `mod` 10
+    let tens = (v `div` 10) `mod` 10
+    let hundreds = v `div` 100
+    store (Ram i) (MemoryValue8 hundreds)
+    store (Ram $ i + 1) (MemoryValue8 tens)
+    store (Ram $ i + 2) (MemoryValue8 ones)
+execute (LDIR vx) = do
+    (MemoryValue16 i) <- load $ Register I
+    mapM_ (\r -> do
+            v <- load $ Register r
+            store (Ram $ i + fromIntegral (fromEnum r)) v
+          ) [V0 .. vx]
+execute (LDRI vx) = do
+    (MemoryValue16 i) <- load $ Register I
+    mapM_ (\r -> do
+            v <- load $ Ram (i + fromIntegral (fromEnum r))
+            store (Register r) v
+          ) [V0 .. vx]
 execute _ = return ()

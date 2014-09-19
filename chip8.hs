@@ -1,11 +1,15 @@
 import System.Environment (getArgs)
-import qualified Data.ByteString.Lazy as B
+import Graphics.UI.SDL as SDL
+import qualified Data.ByteString as B
 
 import Chip8.Emulator
+import Chip8.Monad.IO
 
 main :: IO()
 main = do
+    SDL.init [InitVideo]
     [romFilePath] <- getArgs
     romFile <- B.readFile romFilePath
-    -- initialize emulator from romFile
-    undefined
+    runIOEmulator $ do
+      loadProgram romFile
+      emulate

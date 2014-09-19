@@ -21,8 +21,11 @@ executable chip8-emulator
   -- other-extensions:    
   build-depends:       base >=4.7 && <5,
                        bytestring >= 0.10,
+                       mtl,
                        array,
-                       random
+                       random,
+                       bitwise,
+                       SDL
   -- hs-source-dirs:      
   default-language:    Haskell2010
   ghc-options:         -O2 -Wall

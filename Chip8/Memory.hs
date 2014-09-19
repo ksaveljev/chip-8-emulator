@@ -5,6 +5,9 @@ import Data.STRef
 import Data.Array.ST (STUArray, newArray, readArray, writeArray)
 import System.Random (StdGen)
 import Control.Monad.ST (ST)
+import qualified Data.Array.BitArray.ST as BA
+
+import Chip8.KeyEvent
 
 data Address = Register Register
              | Pc
@@ -33,6 +36,8 @@ data Memory s = Memory { memory :: STUArray s Word16 Word8
                        , pc :: STRef s Word16
                        , sp :: STRef s Word8
                        , stack :: STUArray s Word8 Word16
+                       , keyEventState :: KeyEventState s
+                       , videoMemory :: BA.STBitArray s Int
                        , stdGen :: STRef s StdGen
                        }
 
@@ -46,6 +51,8 @@ new rndGen = do
     pc' <- newSTRef 0x200
     sp' <- newSTRef 0
     stack' <- newArray (0x0, 0xF) 0
+    keyEventState' <- newKeyEventState
+    videoMemory' <- BA.newArray (0, 8 * 64 * 8 * 32 - 1) False -- TODO: declare as constans somewhere
     stdGen' <- newSTRef rndGen
     return Memory { memory = memory'
                   , registers = registers'
@@ -55,6 +62,8 @@ new rndGen = do
                   , pc = pc'
                   , sp = sp'
                   , stack = stack'
+                  , keyEventState = keyEventState'
+                  , videoMemory = videoMemory'
                   , stdGen = stdGen'
                   }
 
