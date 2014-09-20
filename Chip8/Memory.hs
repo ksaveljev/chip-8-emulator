@@ -4,6 +4,7 @@ import Data.Word (Word8, Word16)
 import Data.STRef
 import Data.Array.ST (STUArray, newArray, readArray, writeArray)
 import System.Random (StdGen)
+import Control.Monad (foldM_)
 import Control.Monad.ST (ST)
 
 import Chip8.KeyEvent
@@ -56,6 +57,10 @@ new rndGen = do
     keyEventState' <- newKeyEventState
     videoMemory' <- newVideoMemory
     stdGen' <- newSTRef rndGen
+    foldM_ (\a x -> do -- load font
+            writeArray memory' a x
+            return $ a + 1
+           ) 0 font
     return Memory { memory = memory'
                   , registers = registers'
                   , registerI = registerI'

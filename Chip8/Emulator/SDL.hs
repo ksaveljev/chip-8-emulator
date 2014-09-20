@@ -64,7 +64,7 @@ instance MonadEmulator SDLEmulator where
     drawSprite x y n (Ram address) = SDLEmulator $ do
       mem <- ask
       sprite <- lift $ stToIO $ fmap (take n . drop (fromIntegral address)) (getElems $ memory mem)
-      lift $ stToIO $ draw (videoMemory mem) x y sprite
+      trace ("address: " ++ (show address) ++ " sprite: " ++ (show sprite)) $ lift $ stToIO $ draw (videoMemory mem) x y sprite
     drawSprite _ _ _ _ = error "Incorrect Address in drawSprite"
     randomWord8 = SDLEmulator $ do
       mem <- ask
@@ -92,7 +92,7 @@ drawVideoMemory renderer vram = do
         drawBit a i = do
           let x = a `mod` vWidth
           let y = a `div` vWidth
-          _ <- fillRectangle renderer (pixel x y) (if i then Black else White)
+          _ <- fillRectangle renderer (pixel x y) (if i then White else Black)
           return $ a + 1
 
 initializeSDL :: [Word32] -> IO (Risky())
@@ -130,7 +130,8 @@ setColor renderer Black = SDL.setRenderDrawColor renderer 0x00 0x00 0x00 0x00
 fillRectangle :: SDL.Renderer -> SDL.Rect -> Colour -> IO CInt
 fillRectangle renderer shape color = do
     _ <- setColor renderer color
-    trace ("fill " ++ show shape ++ " color = " ++ show color) $ with shape $ SDL.renderFillRect renderer
+    --trace ("fill " ++ show shape ++ " color = " ++ show color) $ with shape $ SDL.renderFillRect renderer
+    with shape $ SDL.renderFillRect renderer
 
 runSDLEmulator :: SDLEmulator a -> IO ()
 runSDLEmulator (SDLEmulator reader) = do

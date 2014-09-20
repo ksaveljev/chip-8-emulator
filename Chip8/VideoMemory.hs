@@ -6,6 +6,8 @@ import Control.Monad (foldM, when)
 import Control.Monad.ST (ST)
 import qualified Data.Array.BitArray.ST as BA
 
+import Debug.Trace
+
 type VideoMemory s = BA.STBitArray s Int
 
 vScale :: Int
@@ -35,8 +37,8 @@ draw vram x y sprite = do
             let dx = a `mod` 8 :: Int
             let dy = a `div` 8 :: Int
             currentStateOn <- BA.readArray vram (posIndex (fromIntegral x + dx) (fromIntegral y + dy))
-            let e' = state && currentStateOn
-            when state $ drawPixel (fromIntegral x + dx) (fromIntegral y + dy) (not e')
+            let e' = state /= currentStateOn
+            when e' $ drawPixel (fromIntegral x + dx) (fromIntegral y + dy) state
             return (a + 1, e' || e)
 
 toBoolList :: Word8 -> [Bool]
