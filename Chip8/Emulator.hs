@@ -152,7 +152,7 @@ execute (ADDI vx) = do
     store (Register I) (MemoryValue16 $ a + fromIntegral b)
 execute (LDF vx) = do
     (MemoryValue8 v) <- load $ Register vx
-    store (Register I) (MemoryValue16 $ fromIntegral $ v .&. 0xF)
+    store (Register I) (MemoryValue16 $ (fromIntegral $ v .&. 0xF) * 5)
 execute (LDBCD vx) = do
     (MemoryValue8 v) <- load $ Register vx
     (MemoryValue16 i) <- load $ Register I
