@@ -1,5 +1,4 @@
 import System.Environment (getArgs)
-import Graphics.UI.SDL as SDL
 import qualified Data.ByteString as B
 
 import Chip8.Emulator
@@ -16,7 +15,6 @@ debug = do
 
 sdl :: IO ()
 sdl = do
-    SDL.init [InitVideo]
     [romFilePath] <- getArgs
     romFile <- B.readFile romFilePath
     runSDLEmulator $ do
@@ -24,5 +22,4 @@ sdl = do
       emulate
 
 main :: IO ()
-main = do
-    debug
+main = sdl

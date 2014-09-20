@@ -55,7 +55,7 @@ decodeInstruction instruction =
       0x4 -> SNEB vx byte
       0x5 -> case op of
                0x0 -> SER vx vy
-               _ -> oops
+               _ -> error $ "Unknown 0x5 instruction: " ++ show instruction
       0x6 -> LDB vx byte
       0x7 -> ADDB vx byte
       0x8 -> case op of
@@ -68,18 +68,18 @@ decodeInstruction instruction =
                0x6 -> SHR vx
                0x7 -> SUBN vx vy
                0xE -> SHL vx
-               _ -> oops
+               _ -> error $ "Unknown 0x8 instruction: " ++ show instruction
       0x9 -> case op of
                0x0 -> SNER vx vy
-               _ -> oops
+               _ -> error $ "Unknown 0x9 instruction: " ++ show instruction
       0xA -> LDI (Ram addr)
       0xB -> LONGJP (Ram addr)
       0xC -> RND vx byte
       0xD -> DRW vx vy (fromIntegral op)
       0xE -> case xoxx of
-               0xE090 -> SKP vx
+               0xE09E -> SKP vx
                0xE0A1 -> SKNP vx
-               _ -> oops
+               _ -> error $ "Unknown 0xE instruction: " ++ show instruction
       0xF -> case xoxx of
                0xF007 -> LDRDT vx
                0xF00A -> LDK vx
@@ -90,8 +90,8 @@ decodeInstruction instruction =
                0xF033 -> LDBCD vx
                0xF055 -> LDIR vx
                0xF065 -> LDRI vx
-               _ -> oops
-      _ -> oops
+               _ -> error $ "Unknown 0xF instruction: " ++ show instruction
+      _ -> error "Unknown instruction"
     where
       operation = (instruction .&. 0xF000) `shiftR` 12
       addr = instruction .&. 0x0FFF
@@ -100,4 +100,3 @@ decodeInstruction instruction =
       vx = toRegister $ (instruction .&. 0x0F00) `shiftR` 8
       vy = toRegister $ (instruction .&. 0x00F0) `shiftR` 4
       xoxx = instruction .&. 0xF0FF
-      oops = error "Unknown instruction"

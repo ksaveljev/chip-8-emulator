@@ -14,6 +14,7 @@ emulate :: MonadEmulator m => m ()
 emulate = do
     instr <- loadInstruction
     execute instr
+    sleep
     emulate
 
 loadProgram :: MonadEmulator m => B.ByteString -> m ()

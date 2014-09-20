@@ -15,3 +15,4 @@ class (Functor m, Monad m) => MonadEmulator m where
     randomWord8 :: m Word8
     waitForKeyPress :: m Key
     isKeyPressed :: Key -> m Bool
+    sleep :: m ()
