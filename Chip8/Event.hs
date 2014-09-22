@@ -11,26 +11,26 @@ data Key = K0 | K1 | K2 | K3
          | KC | KD | KE | KF
          deriving (Enum, Ix, Ord, Eq, Show)
 
-data EventState s = EventState { sdlQuit :: STRef s Bool
+data EventState s = EventState { isQuitTime :: STRef s Bool
                                , lastEventKeyDown :: STRef s (Maybe Key)
                                , keyState :: STUArray s Key Bool
                                }
 
 newEventState :: ST s (EventState s)
 newEventState = do
-    sdlQuit' <- newSTRef False
+    isQuitTime' <- newSTRef False
     lastEventKeyDown' <- newSTRef Nothing
     keyState' <- newArray (K0, KF) False
-    return EventState { sdlQuit = sdlQuit'
+    return EventState { isQuitTime = isQuitTime'
                       , lastEventKeyDown = lastEventKeyDown'
                       , keyState = keyState'
                       }
 
 timeToQuit :: EventState s -> ST s ()
-timeToQuit es = writeSTRef (sdlQuit es) True
+timeToQuit es = writeSTRef (isQuitTime es) True
 
 isTimeToQuit :: EventState s -> ST s Bool
-isTimeToQuit es = readSTRef (sdlQuit es)
+isTimeToQuit es = readSTRef (isQuitTime es)
 
 isKeyPressed :: EventState s -> Key -> ST s Bool
 isKeyPressed state = readArray (keyState state)
