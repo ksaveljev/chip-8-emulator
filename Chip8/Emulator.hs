@@ -11,7 +11,7 @@ import Chip8.Memory (Address(..), MemoryValue(..), Register(..))
 import Chip8.Instruction
 
 emulate :: MonadEmulator m => m ()
-emulate = repeatUntilComplete $ loadInstruction >>= execute >> handleEvents
+emulate = repeatUntilComplete $ loadInstruction >>= execute >> handleEvents >> sleep
   where
     repeatUntilComplete operation = do
       _ <- operation
