@@ -2,11 +2,11 @@
 module Chip8.Emulator.SDL ( runSDLEmulator
                           ) where
 
-import Data.Word (Word32)
+import Data.Word (Word8, Word32)
 import Data.List (foldl')
 import Data.Bits ((.|.))
-import Data.STRef (readSTRef, writeSTRef)
-import Control.Monad (foldM_)
+import Data.STRef (STRef, readSTRef, writeSTRef)
+import Control.Monad (foldM_, when)
 import Control.Monad.ST (RealWorld, stToIO)
 import Data.Array.ST (getElems)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
@@ -194,6 +194,11 @@ keymap (SDL.Keysym keysymScancode _ _) =
       56 -> Just KF -- /
       _ -> Nothing
 
+decTimer :: STRef RealWorld Word8 -> IO ()
+decTimer timer = do
+    v <- stToIO $ readSTRef timer
+    when (v > 0) (stToIO $ writeSTRef timer (v - 1))
+
 runSDLEmulator :: SDLEmulator a -> IO ()
 runSDLEmulator (SDLEmulator reader) = do
     initializeSDL [SDL.initFlagVideo] >>= catchRisky
@@ -203,6 +208,7 @@ runSDLEmulator (SDLEmulator reader) = do
     g <- newStdGen
     mem <- stToIO $ Memory.new g
     _ <- repeatedTimer (drawVideoMemory renderer (videoMemory mem)) (usDelay 100)
+    _ <- repeatedTimer (decTimer $ delayTimer mem) (msDelay 17)
     _ <- runReaderT reader mem
     SDL.destroyRenderer renderer
     SDL.destroyWindow window

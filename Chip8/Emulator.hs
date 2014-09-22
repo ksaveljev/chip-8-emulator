@@ -88,7 +88,7 @@ execute (ADDR vx vy) = do
     (MemoryValue8 a) <- load $ Register vx
     (MemoryValue8 b) <- load $ Register vy
     let c = fromIntegral a + fromIntegral b :: Word16
-    store (Register VF) (MemoryValue8 $ if a + b > 255 then 1 else 0)
+    store (Register VF) (MemoryValue8 $ if c > 255 then 1 else 0)
     store (Register vx) (MemoryValue8 $ fromIntegral $ c .&. 0xFFFF)
 execute (SUB vx vy) = do
     (MemoryValue8 a) <- load $ Register vx
