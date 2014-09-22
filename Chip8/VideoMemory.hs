@@ -6,8 +6,6 @@ import Control.Monad (foldM, when)
 import Control.Monad.ST (ST)
 import qualified Data.Array.BitArray.ST as BA
 
-import Debug.Trace
-
 type VideoMemory s = BA.STBitArray s Int
 
 vScale :: Int

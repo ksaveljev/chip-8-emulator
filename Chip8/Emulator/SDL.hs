@@ -8,7 +8,7 @@ import Data.Bits ((.|.))
 import Data.STRef (readSTRef, writeSTRef)
 import Control.Monad (foldM_)
 import Control.Monad.ST (RealWorld, stToIO)
-import Data.Array.ST (readArray, getElems)
+import Data.Array.ST (getElems)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Trans (MonadIO, lift)
 import Control.Applicative
@@ -22,15 +22,16 @@ import qualified Graphics.UI.SDL as SDL
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Ptr
-import Foreign.Marshal.Utils (with)
+import Foreign.Marshal.Alloc (alloca)
+import Foreign.Marshal.Utils (with, maybePeek)
+import Foreign.Storable (peek)
 
 import Chip8.Monad
 import Chip8.VideoMemory (VideoMemory, clearVideoMemory, draw, vScale, vWidth, vHeight)
-import Chip8.KeyEvent (KeyEventState(..), Key(..))
+import Chip8.Event (EventState(..), Key(..))
 import Chip8.Memory (Memory(..), Address(..))
 import qualified Chip8.Memory as Memory
-
-import Debug.Trace
+import qualified Chip8.Event as Event
 
 newtype SDLEmulator a = SDLEmulator (ReaderT (Memory RealWorld) IO a)
                         deriving (Functor, Applicative, Monad, MonadIO)
@@ -51,9 +52,6 @@ screenScale = fromIntegral vScale
 instance MonadEmulator SDLEmulator where
     load address = SDLEmulator $ do
       mem <- ask
-      -- requires import of Debug.Trace
-      -- value <- lift $ stToIO $ Memory.load mem address
-      -- trace ("load from " ++ (show address) ++ " value " ++ (show value)) $ lift $ stToIO $ Memory.load mem address
       lift $ stToIO $ Memory.load mem address
     store address value = SDLEmulator $ do
       mem <- ask
@@ -64,7 +62,7 @@ instance MonadEmulator SDLEmulator where
     drawSprite x y n (Ram address) = SDLEmulator $ do
       mem <- ask
       sprite <- lift $ stToIO $ fmap (take n . drop (fromIntegral address)) (getElems $ memory mem)
-      trace ("address: " ++ (show address) ++ " sprite: " ++ (show sprite)) $ lift $ stToIO $ draw (videoMemory mem) x y sprite
+      lift $ stToIO $ draw (videoMemory mem) x y sprite
     drawSprite _ _ _ _ = error "Incorrect Address in drawSprite"
     randomWord8 = SDLEmulator $ do
       mem <- ask
@@ -72,18 +70,32 @@ instance MonadEmulator SDLEmulator where
       let (rnd, g') = randomR (0x0, 0xFF) g
       lift $ stToIO $ writeSTRef (stdGen mem) g'
       return rnd 
+    handleEvents = SDLEmulator $ do
+      mem <- ask
+      let kes = eventState mem
+      lift $ handleNextEvent kes
     waitForKeyPress = SDLEmulator $ do
-      lift $ putStrLn "HI"
-      return K0 -- TODO: undefined
+      mem <- ask
+      lift $ getKey (eventState mem)
+      where
+        getKey kes = do
+          handleNextEvent kes
+          k <- stToIO $ readSTRef $ lastEventKeyDown kes
+          case k of
+            Nothing -> getKey kes
+            Just key -> return key
     isKeyPressed key = SDLEmulator $ do
       mem <- ask
-      lift $ stToIO $ readArray (keyState $ keyEventState mem) key
+      lift $ stToIO $ Event.isKeyPressed (eventState mem) key
     sleep = SDLEmulator $ lift $ threadDelay 800
+    isDone = SDLEmulator $ do
+      mem <- ask
+      lift $ stToIO $ Event.isTimeToQuit (eventState mem)
 
 drawVideoMemory :: SDL.Renderer -> VideoMemory RealWorld -> IO ()
 drawVideoMemory renderer vram = do
     vm <- stToIO $ BA.getElems vram
-    trace ("draaaaw memory! " ++ (show $ length vm)) $ drawVM vm
+    drawVM vm
       where
         pixel x y = SDL.Rect (screenScale * fromIntegral x) (screenScale * fromIntegral y) screenScale screenScale
         drawVM mem = do
@@ -130,8 +142,57 @@ setColor renderer Black = SDL.setRenderDrawColor renderer 0x00 0x00 0x00 0x00
 fillRectangle :: SDL.Renderer -> SDL.Rect -> Colour -> IO CInt
 fillRectangle renderer shape color = do
     _ <- setColor renderer color
-    --trace ("fill " ++ show shape ++ " color = " ++ show color) $ with shape $ SDL.renderFillRect renderer
     with shape $ SDL.renderFillRect renderer
+
+pollEvent :: IO (Maybe SDL.Event)
+pollEvent = alloca $ \pointer -> do
+  status <- SDL.pollEvent pointer
+  if status == 1
+    then maybePeek peek pointer
+    else return Nothing
+
+handleNextEvent :: EventState RealWorld -> IO ()
+handleNextEvent es = do
+    maybeEvent <- pollEvent
+    case maybeEvent of
+      Nothing -> return ()
+      Just (SDL.QuitEvent _ _) -> stToIO $ Event.timeToQuit es
+      Just (SDL.KeyboardEvent eventType _ _ _ _ keysym) ->
+        case eventType of
+          768 -> do -- SDL_KEYDOWN
+            stToIO $ Event.setLastKeyPressed es (keymap keysym)
+            setKeyHandler keysym True
+          769 -> do -- SDL_KEYUP
+            stToIO $ Event.setLastKeyPressed es Nothing
+            setKeyHandler keysym False
+          _ -> stToIO $ Event.setLastKeyPressed es Nothing
+        where
+          setKeyHandler key b =
+            case keymap key of
+              Just k -> stToIO $ Event.setKey es k b
+              _ -> return ()
+      _ -> return ()
+
+keymap :: SDL.Keysym -> Maybe Key
+keymap (SDL.Keysym keysymScancode _ _) =
+    case keysymScancode of
+      36 -> Just K1 -- 7
+      37 -> Just K2 -- 8
+      38 -> Just K3 -- 9
+      39 -> Just KC -- 0
+      24 -> Just K4 -- u
+      12 -> Just K5 -- i
+      18 -> Just K6 -- o
+      19 -> Just KD -- p
+      13 -> Just K7 -- j
+      14 -> Just K8 -- k
+      15 -> Just K9 -- l
+      51 -> Just KE -- ;
+      16 -> Just KA -- m
+      54 -> Just K0 -- ,
+      55 -> Just KB -- .
+      56 -> Just KF -- /
+      _ -> Nothing
 
 runSDLEmulator :: SDLEmulator a -> IO ()
 runSDLEmulator (SDLEmulator reader) = do

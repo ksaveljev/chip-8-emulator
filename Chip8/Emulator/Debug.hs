@@ -12,7 +12,7 @@ import System.Random (newStdGen, randomR)
 import qualified Data.Array.BitArray.ST as BA
 
 import Chip8.Monad
-import Chip8.KeyEvent (KeyEventState(..), Key(..))
+import Chip8.Event (EventState(..), Key(..))
 import Chip8.Memory (Memory(..), Address(..))
 import qualified Chip8.Memory as Memory
 
@@ -21,12 +21,12 @@ newtype DebugEmulator a = DebugEmulator (ReaderT (Memory RealWorld) IO a)
 
 instance MonadEmulator DebugEmulator where
     load address = DebugEmulator $ do
-      trace ("Loading value from address " ++ (show address)) $ return ()
+      trace ("Loading value from address " ++ show address) $ return ()
       mem <- ask
       value <- lift $ stToIO $ Memory.load mem address
-      trace ("Loaded value " ++ (show value)) $ lift $ stToIO $ Memory.load mem address
+      trace ("Loaded value " ++ show value) $ lift $ stToIO $ Memory.load mem address
     store address value = DebugEmulator $ do
-      trace ("Storing value " ++ (show value) ++ " to address " ++ (show address)) $ return ()
+      trace ("Storing value " ++ show value ++ " to address " ++ show address) $ return ()
       mem <- ask
       lift $ stToIO $ Memory.store mem address value
     clearScreen = DebugEmulator $ do
@@ -44,13 +44,16 @@ instance MonadEmulator DebugEmulator where
       let (rnd, g') = randomR (0x0, 0xFF) g
       lift $ stToIO $ writeSTRef (stdGen mem) g'
       return rnd 
+    handleEvents = undefined
     waitForKeyPress = DebugEmulator $ do
       trace "waitForKeyPress" $ return ()
       return K0 -- TODO: undefined
     isKeyPressed key = DebugEmulator $ do
-      trace ("is key pressed " ++ (show key)) $ return ()
+      trace ("is key pressed " ++ show key) $ return ()
       mem <- ask
-      lift $ stToIO $ readArray (keyState $ keyEventState mem) key
+      lift $ stToIO $ readArray (keyState $ eventState mem) key
+    sleep = undefined
+    isDone = undefined
 
 runDebugEmulator :: DebugEmulator a -> IO a
 runDebugEmulator (DebugEmulator reader) = do

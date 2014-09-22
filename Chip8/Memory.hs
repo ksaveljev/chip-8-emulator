@@ -7,7 +7,7 @@ import System.Random (StdGen)
 import Control.Monad (foldM_)
 import Control.Monad.ST (ST)
 
-import Chip8.KeyEvent
+import Chip8.Event
 import Chip8.VideoMemory (VideoMemory, newVideoMemory)
 
 data Address = Register Register
@@ -39,7 +39,7 @@ data Memory s = Memory { memory :: STUArray s Word16 Word8
                        , pc :: STRef s Word16
                        , sp :: STRef s Word8
                        , stack :: STUArray s Word8 Word16
-                       , keyEventState :: KeyEventState s
+                       , eventState :: EventState s
                        , videoMemory :: VideoMemory s
                        , stdGen :: STRef s StdGen
                        }
@@ -54,7 +54,7 @@ new rndGen = do
     pc' <- newSTRef 0x200
     sp' <- newSTRef 0
     stack' <- newArray (0x0, 0xF) 0
-    keyEventState' <- newKeyEventState
+    eventState' <- newEventState
     videoMemory' <- newVideoMemory
     stdGen' <- newSTRef rndGen
     foldM_ (\a x -> do -- load font
@@ -69,7 +69,7 @@ new rndGen = do
                   , pc = pc'
                   , sp = sp'
                   , stack = stack'
-                  , keyEventState = keyEventState'
+                  , eventState = eventState'
                   , videoMemory = videoMemory'
                   , stdGen = stdGen'
                   }

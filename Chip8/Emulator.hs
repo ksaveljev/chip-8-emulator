@@ -11,11 +11,12 @@ import Chip8.Memory (Address(..), MemoryValue(..), Register(..))
 import Chip8.Instruction
 
 emulate :: MonadEmulator m => m ()
-emulate = do
-    instr <- loadInstruction
-    execute instr
-    sleep
-    emulate
+emulate = repeatUntilComplete $ loadInstruction >>= execute >> handleEvents
+  where
+    repeatUntilComplete operation = do
+      _ <- operation
+      complete <- isDone
+      unless complete $ repeatUntilComplete operation
 
 loadProgram :: MonadEmulator m => B.ByteString -> m ()
 loadProgram program =
@@ -152,7 +153,7 @@ execute (ADDI vx) = do
     store (Register I) (MemoryValue16 $ a + fromIntegral b)
 execute (LDF vx) = do
     (MemoryValue8 v) <- load $ Register vx
-    store (Register I) (MemoryValue16 $ (fromIntegral $ v .&. 0xF) * 5)
+    store (Register I) (MemoryValue16 $ fromIntegral (v .&. 0xF) * 5)
 execute (LDBCD vx) = do
     (MemoryValue8 v) <- load $ Register vx
     (MemoryValue16 i) <- load $ Register I
