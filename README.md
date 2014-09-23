@@ -7,6 +7,10 @@ am pretty sure quite a few which are still hiding. Nevertheless I'm quite happy
 about the state of this project as it is the biggest Haskell project for me so
 far.
 
+    cabal sandbox init
+    cabal install --dependencies-only
+    cabal run -- roms/TETRIS
+
 ![Example gif output](http://ksaveljev.github.io/tetris.gif)
 
 Known issues:
