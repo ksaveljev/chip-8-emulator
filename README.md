@@ -13,7 +13,7 @@ far.
 
 ![Example gif output](http://ksaveljev.github.io/tetris.gif)
 
-Known issues:
+#### Known issues:
 
 - no sound :(
 - in some games (like Connect4) the pressed key appears to be "stuck" for a
